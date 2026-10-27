@@ -3,7 +3,8 @@ services:
     name: learnspace-backend
     runtime: docker
     rootDir: student-learning-platform-backend
-    dockerfilePath: ./Dockerfile
+    # Paths below are relative to rootDir. The context must contain package-lock.json.
+    dockerfilePath: Dockerfile
     dockerContext: .
     healthCheckPath: /health/ready
     envVars:

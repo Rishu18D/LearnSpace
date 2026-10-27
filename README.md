@@ -25,6 +25,12 @@ Open [http://localhost:5173](http://localhost:5173). The API is available throug
 
 Run the backend regression tests from the project root with `npm test`.
 
+## Deploy on Render
+
+The repository includes a Render Blueprint at [render.yaml](render.yaml). Push the repository to GitHub, then in Render choose **New → Blueprint**, select this repository and branch, and keep `render.yaml` as the Blueprint path. Render will configure the backend Docker service and frontend static site together. Do not select `scripts/start-project.js` as a Dockerfile; it is only the local development launcher.
+
+The production backend needs external MongoDB Atlas databases and a managed RabbitMQ broker; local Docker Compose services are for development only. Follow the [Render deployment guide](student-learning-platform-backend/docs/production-deployment.md) for required environment variables, network configuration, deploy verification, and launch limitations.
+
 Backend services can also be started without the frontend:
 
 ```powershell
