@@ -1,0 +1,80 @@
+{
+  "courses": [
+    {
+      "importKey": "intro-web-development-v1",
+      "title": "Introduction to Web Development",
+      "description": "Build a clear foundation in how the web works, how pages are structured, and how browsers turn code into interactive experiences.",
+      "category": "Web Development",
+      "level": "beginner",
+      "language": "en",
+      "estimatedMinutes": 90,
+      "tags": ["html", "web", "beginner"],
+      "learningObjectives": [
+        "Explain how a browser requests and displays a web page",
+        "Create semantic page structure with HTML",
+        "Describe how CSS styles web content"
+      ],
+      "prerequisites": ["No prior programming experience is required"],
+      "modules": [
+        {
+          "title": "How the Web Works",
+          "description": "Understand the basic parts of a web request and response.",
+          "order": 0,
+          "lessons": [
+            {
+              "title": "A Web Request, Step by Step",
+              "description": "Follow a browser request from URL to rendered page.",
+              "learningObjectives": [
+                "Identify the browser, server, and response in a basic request"
+              ],
+              "contentFormat": "markdown",
+              "estimatedMinutes": 15,
+              "order": 0,
+              "content": "# A Web Request, Step by Step\n\nA browser turns a URL into a request to a web server. The server responds with resources such as HTML, CSS, images, and scripts.\n\n## The basic sequence\n\n1. Enter a URL in the browser.\n2. The browser finds the server for that domain.\n3. The browser requests the page.\n4. The server returns the page resources.\n5. The browser builds and displays the page.\n\n```text\nBrowser  ->  HTTP request  ->  Server\nBrowser  <-  HTML response <-  Server\n```\n\n> The browser does not receive a finished picture of a web page. It receives resources and interprets them.\n\n**Practice:** Describe what happens between entering a URL and seeing the page."
+            },
+            {
+              "title": "Structure with Semantic HTML",
+              "description": "Use meaningful elements to organize a page.",
+              "learningObjectives": [
+                "Choose semantic elements for page regions"
+              ],
+              "contentFormat": "markdown",
+              "estimatedMinutes": 20,
+              "order": 1,
+              "content": "# Structure with Semantic HTML\n\nHTML describes the structure and meaning of page content.\n\n```html\n<main>\n  <article>\n    <h1>Welcome</h1>\n    <p>This is the main page content.</p>\n  </article>\n</main>\n```\n\nUse headings in a logical order and choose elements for their meaning. Semantic HTML helps people, browsers, and assistive technologies understand a page."
+            }
+          ]
+        }
+      ],
+      "quizzes": [
+        {
+          "title": "Web fundamentals",
+          "instructions": "Choose the best answer for each question.",
+          "passingScore": 50,
+          "attemptLimit": 3,
+          "published": true,
+          "showAnswers": true,
+          "questions": [
+            {
+              "prompt": "Which component requests a web page from a server?",
+              "type": "single_choice",
+              "options": ["Browser", "Database", "Keyboard"],
+              "correctAnswers": ["Browser"],
+              "explanation": "The browser sends the request and renders the server response.",
+              "points": 1,
+              "order": 0
+            },
+            {
+              "prompt": "HTML gives content its structure and meaning.",
+              "type": "true_false",
+              "correctAnswers": ["true"],
+              "explanation": "HTML elements describe the document structure and meaning.",
+              "points": 1,
+              "order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

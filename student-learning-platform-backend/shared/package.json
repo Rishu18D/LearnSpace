@@ -1,0 +1,15 @@
+{
+  "name": "@slp/common",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./service-app": "./service-app.js"
+  }
+}

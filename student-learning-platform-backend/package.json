@@ -1,0 +1,23 @@
+{
+  "name": "student-learning-platform-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": ["shared", "api-gateway", "services/*"],
+  "scripts": {
+    "dev:all": "node scripts/start-backend.js",
+    "dev:gateway": "npm run dev -w api-gateway",
+    "dev:auth": "npm run dev -w auth-service",
+    "dev:students": "npm run dev -w student-service",
+    "dev:courses": "npm run dev -w course-service",
+    "dev:enrollments": "npm run dev -w enrollment-service",
+    "dev:notifications": "npm run dev -w notification-service",
+    "dev:progress": "npm run dev -w progress-service",
+    "dev:analytics": "npm run dev -w analytics-service",
+    "provision:admin": "node scripts/promote-admin.js",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

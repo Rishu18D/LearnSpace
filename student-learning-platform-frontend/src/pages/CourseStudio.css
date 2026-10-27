@@ -1,0 +1,50 @@
+.studio-heading,.studio-section-heading,.studio-card-heading,.studio-actions{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.studio-heading{margin-bottom:24px}
+.studio-heading h1{margin:7px 0;font-size:30px}
+.studio-heading h1 em{color:var(--purple);font-style:normal}
+.studio-heading p,.studio-section-heading p{margin:0;color:#858b9e;font-size:12px}
+.studio-form{padding:24px;display:grid;gap:15px}
+.studio-form>h2,.studio-section-heading h2{margin:0;font-size:18px}
+.studio-form>label,.studio-module>label,.studio-lesson>label,.studio-grid>label,.studio-tabs>label,.import-panel label{display:grid;gap:7px;font-size:11px;font-weight:700;color:#464b62}
+.studio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.studio-section-heading{margin-top:16px;padding-top:18px;border-top:1px solid var(--line)}
+.studio-section-heading>div{display:grid;gap:6px}
+.studio-module,.studio-lesson{display:grid;gap:12px;border:1px solid var(--line);border-radius:12px;padding:16px;background:#fbfbfe}
+.studio-lesson{margin-top:6px;background:#fff}
+.studio-card-heading>div{display:flex;gap:4px}
+.studio-card-heading b{font-size:12px}
+.studio-content{resize:vertical;min-height:210px;font-family:ui-monospace,Consolas,monospace;line-height:1.6}
+.studio-check{align-self:center;display:flex!important;align-items:center;gap:8px}
+.studio-check input{accent-color:var(--purple)}
+.studio-actions{padding-top:12px}
+.studio-tabs{display:flex;gap:14px;margin:20px 0}
+.studio-tabs>label:first-child{flex:1}
+.studio-tabs>label:last-child{width:min(240px,40%)}
+.studio-course-list{display:grid;gap:10px}
+.studio-course{padding:16px;display:flex;align-items:center;gap:14px}
+.studio-course-icon{width:42px;height:42px;display:grid;place-items:center;background:#eeedff;color:var(--purple);border-radius:11px}
+.studio-course-main{flex:1;min-width:0}
+.studio-course-main h2{font-size:14px;margin:0 0 5px}
+.studio-course-main p,.studio-course-main small{color:#858b9e;font-size:10px;margin:0}
+.studio-course-main small{display:block;margin-top:5px}
+.studio-course-actions{display:flex;align-items:center;gap:5px}
+.import-panel{display:grid;grid-template-columns:1fr auto;gap:14px;padding:18px;margin-bottom:20px}
+.import-panel h2{font-size:16px;margin:8px 0 4px}
+.import-panel p{font-size:11px;color:#858b9e;margin:0}
+.import-selected,.import-result{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px}
+.import-selected span{flex:1}
+.import-result{display:grid;justify-items:start;border-top:1px solid var(--line);padding-top:12px}
+.import-result p{color:#b34354;margin:0}
+.course-start-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.course-objectives{display:grid;gap:8px;margin:0 0 24px;padding-left:22px;color:#565d73;font-size:13px}
+.review-queue{display:grid;gap:14px}
+.review-card{padding:20px;display:grid;gap:14px}
+.review-card-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.review-card-heading h2{font-size:15px;margin:0 0 5px}
+.review-card-heading small,.review-card-heading>span{font-size:10px;color:#858b9e}
+.review-answer{display:grid;gap:9px;padding-top:13px;border-top:1px solid var(--line)}
+.review-answer h3{font-size:12px;margin:0}
+.review-answer blockquote{margin:0;padding:10px 13px;background:#f8f8ff;border-left:3px solid var(--purple);border-radius:5px;font-size:12px;white-space:pre-wrap}
+.review-answer>p{font-size:11px;color:#747b96;margin:0}
+@media(max-width:760px){.studio-course{align-items:flex-start;flex-wrap:wrap}.studio-course-main{min-width:calc(100% - 64px)}.studio-course-actions{width:100%;justify-content:flex-end}.studio-form{padding:16px}.studio-grid{grid-template-columns:1fr}.studio-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width:520px){.studio-tabs{align-items:stretch;flex-direction:column}.studio-tabs>label:last-child{width:100%}.studio-section-heading{align-items:flex-start;flex-direction:column}.import-panel{grid-template-columns:1fr}.studio-actions{align-items:stretch;flex-direction:column}.course-start-actions{align-items:flex-start;flex-direction:column}}

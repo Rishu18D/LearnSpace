@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+coverage
+**/coverage
+npm-debug.log*
+Dockerfile*

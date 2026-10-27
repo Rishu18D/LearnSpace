@@ -1,0 +1,13 @@
+{
+  "name": "student-learning-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/start-project.js",
+    "test": "npm test --prefix student-learning-platform-backend"
+  }
+}

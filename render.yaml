@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: learnspace-backend
+    runtime: docker
+    rootDir: student-learning-platform-backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: learnspace-frontend
+          property: host
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: MONGO_AUTH_URI
+        sync: false
+      - key: MONGO_STUDENTS_URI
+        sync: false
+      - key: MONGO_COURSES_URI
+        sync: false
+      - key: MONGO_ENROLLMENTS_URI
+        sync: false
+      - key: MONGO_NOTIFICATIONS_URI
+        sync: false
+      - key: MONGO_PROGRESS_URI
+        sync: false
+      - key: MONGO_ANALYTICS_URI
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+
+  - type: web
+    name: learnspace-frontend
+    runtime: static
+    rootDir: student-learning-platform-frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: learnspace-backend
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
