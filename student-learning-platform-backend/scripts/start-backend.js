@@ -22,7 +22,6 @@ if (!isProduction && !existsSync(path.join(backendRoot, ".env"))) {
 if (isRender) {
   const requiredProductionEnv = [
     "JWT_SECRET",
-    "CORS_ORIGIN",
     "MONGO_AUTH_URI",
     "MONGO_STUDENTS_URI",
     "MONGO_COURSES_URI",
@@ -32,6 +31,7 @@ if (isRender) {
     "MONGO_ANALYTICS_URI",
     "RABBITMQ_URL"
   ];
+  if (process.env.SERVE_FRONTEND !== "true") requiredProductionEnv.push("CORS_ORIGIN");
   const missing = requiredProductionEnv.filter(name => !process.env[name]?.trim());
   if (missing.length) {
     console.error(`Missing required Render environment variables: ${missing.join(", ")}`);

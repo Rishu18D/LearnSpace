@@ -4,7 +4,10 @@ import { isIP } from "node:net";
 
 export function corsOrigins() {
   const configured = process.env.CORS_ORIGIN;
-  if (!configured) return ["http://localhost:5173"];
+  if (!configured) {
+    if (process.env.NODE_ENV === "production" && process.env.SERVE_FRONTEND === "true") return [];
+    return ["http://localhost:5173"];
+  }
 
   return configured.split(",").map(value => {
     const origin = value.trim();

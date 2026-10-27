@@ -1,6 +1,6 @@
 # Production deployment (Render)
 
-This repository includes a Render Blueprint in [`../../render.yaml`](../../render.yaml). The backend is packaged as one Docker web service that runs the gateway and its seven internal services; the React app is a separate Render static site. Only the gateway is exposed publicly. The backend services use their local ports inside the container.
+This repository includes a Render Blueprint in [`../../render.yaml`](../../render.yaml). It creates one public Docker web service. The root Dockerfile builds the React frontend and backend into a single image; the API gateway serves the frontend and proxies `/api` to the internal services. The browser uses one Render hostname for both the website and API. The internal services use private loopback ports inside the container.
 
 ## Required external services
 
@@ -14,13 +14,13 @@ The included Compose file is for local development only. Its MongoDB has no auth
 ## Deploy
 
 1. Push this repository to a Git provider that Render can access.
-2. In the Render Dashboard, choose **New → Blueprint**, connect this repository, and select the branch to deploy. Keep the Blueprint file path as `render.yaml` at the repository root, then review and apply the detected services. This Blueprint creates the backend Docker web service and the frontend static site together.
-3. Do not create a Docker web service using `scripts/start-project.js` as its Dockerfile. That file is a local development launcher written in JavaScript, not a Dockerfile; this is the cause of the “unknown instruction: import” build error. The backend Dockerfile is `student-learning-platform-backend/Dockerfile` and is already configured by the Blueprint.
+2. In the Render Dashboard, choose **New → Blueprint**, connect this repository, and select the branch to deploy. Keep the Blueprint file path as `render.yaml` at the repository root, then review and apply the single web service.
+3. Do not create a Docker web service using `scripts/start-project.js` as its Dockerfile. That file is a local development launcher written in JavaScript, not a Dockerfile; this is the cause of the “unknown instruction: import” build error. The Blueprint uses the root `Dockerfile` to build both frontend and backend. The backend-only Dockerfile remains at `student-learning-platform-backend/Dockerfile` for backend-only Docker use.
 4. Before the first deploy, provide the requested `MONGO_*_URI` values for the seven Atlas databases and the `RABBITMQ_URL` for your managed TLS RabbitMQ broker. Use separate, least-privilege database credentials. Do not use the local Docker Compose services for production or commit credentials.
 5. Restrict Atlas network access to the outbound IP ranges for the Render region where the backend runs. Avoid `0.0.0.0/0`.
-6. Let Render generate `JWT_SECRET` and keep `TRUST_PROXY_HOPS=1`. The Blueprint connects the frontend host to the backend CORS configuration and the backend host to the frontend build.
-7. Deploy both services and verify the backend `/health/ready` endpoint returns `200`; then open the frontend and verify that course browsing and account registration can reach the API.
-8. Set custom domains in Render if needed. Prefer frontend and API domains under the same registrable domain so browsers send the `SameSite=Lax` refresh cookie. If the frontend or backend domains change, update the backend `CORS_ORIGIN` to the exact frontend origin (scheme and host, no path), and rebuild the frontend with its API base set to the backend host.
+6. Let Render generate `JWT_SECRET` and keep `TRUST_PROXY_HOPS=1`. The single-origin deployment does not need `CORS_ORIGIN`.
+7. Deploy the service and verify `/health/ready` returns `200`; then open the root URL and verify course browsing and account registration can reach `/api`.
+8. Add a custom domain to this same service if needed. Because frontend and API share the domain, no separate CORS or frontend API URL configuration is needed.
 9. Create the first administrator only after registering its account:
 
    ```powershell
@@ -33,13 +33,13 @@ The included Compose file is for local development only. Its MongoDB has no auth
 
    Run this command from the backend directory with a secure operator connection to the production `MONGO_AUTH_URI`. Sign out and back in after promotion. The command promotes an existing account; it does not create one.
 
-### If configuring services manually
+### If configuring the web service manually
 
-The Blueprint is preferred because it wires the frontend API URL and backend CORS origin automatically. If you continue configuring the existing Render service instead:
+The Blueprint is preferred. If configuring one combined Docker web service manually:
 
-- For the backend web service, use the repository root, Docker runtime, **Root Directory** `student-learning-platform-backend`, **Dockerfile Path** `Dockerfile`, and **Docker Context** `.`. Those Docker paths are relative to the configured root directory. Do not use `scripts/start-project.js` as the Dockerfile or start command; the container already uses the `CMD` in `Dockerfile`.
-- Set the same backend environment variables listed in the Blueprint, including the seven `MONGO_*_URI` values, `RABBITMQ_URL`, `JWT_SECRET`, `NODE_ENV=production`, and `TRUST_PROXY_HOPS=1`. Set `CORS_ORIGIN` to the frontend's exact HTTPS origin. If you copied values from the local `.env.example`, change `NODE_ENV=development` to `production`; the backend now detects Render and enforces production mode automatically.
-- Create a separate Render **Static Site** for the frontend with **Root Directory** `student-learning-platform-frontend`, **Build Command** `npm ci && npm run build`, and **Publish Directory** `dist`. Add a rewrite from `/*` to `/index.html` for client-side routes, and set `VITE_API_BASE_URL` to the backend service host. Redeploy after changing this build-time variable.
+- Set **Root Directory** to `.` (the repository root), **Runtime** to Docker, **Dockerfile Path** to `Dockerfile`, and **Docker Context** to `.`. The root Dockerfile builds and bundles both apps.
+- Set `SERVE_FRONTEND=true`, `FRONTEND_DIST_DIR=/app/frontend-dist`, `NODE_ENV=production`, `TRUST_PROXY_HOPS=1`, `JWT_SECRET`, all seven `MONGO_*_URI` values, and `RABBITMQ_URL`. `CORS_ORIGIN` is not needed for this same-origin setup.
+- Do not create a separate static site for the frontend. Set the Render health check path to `/health/ready`.
 
 ## Important launch limitations
 

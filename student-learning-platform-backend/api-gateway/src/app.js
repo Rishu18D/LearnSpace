@@ -5,6 +5,8 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { corsOrigins } from "@slp/common";
 import "../../shared/load-env.js";
 
@@ -59,6 +61,28 @@ for(const [path,target] of services){
     pathRewrite:(p)=>p.replace(new RegExp("^"+path.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),""),
     on:{error:(err,req,res)=>{if(!res.headersSent)res.status(502).json({error:{code:"BAD_GATEWAY",message:"The requested service is unavailable"},requestId:req.headers["x-request-id"]});}}
   }));
+}
+if (process.env.SERVE_FRONTEND === "true") {
+  const frontendDistDir = path.resolve(process.env.FRONTEND_DIST_DIR || "../../student-learning-platform-frontend/dist");
+  const indexFile = path.join(frontendDistDir, "index.html");
+  if (!existsSync(indexFile)) throw new Error(`Frontend build not found: ${indexFile}`);
+
+  app.use(express.static(frontendDistDir, {
+    dotfiles: "deny",
+    index: false,
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        res.setHeader("Cache-Control", "no-cache");
+      }
+    }
+  }));
+  app.get("*", (req, res, next) => {
+    if (req.path === "/api" || req.path.startsWith("/api/") || !req.accepts("html")) return next();
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(indexFile, error => error && next(error));
+  });
 }
 app.use((req,res)=>res.status(404).json({error:{code:"NOT_FOUND",message:"Gateway route not found"},requestId:req.headers["x-request-id"]}));
 export default app;

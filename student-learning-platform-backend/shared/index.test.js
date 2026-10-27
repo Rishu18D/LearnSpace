@@ -71,6 +71,25 @@ test("CORS accepts only explicit origins and normalizes hosted service hostnames
   }
 });
 
+test("same-origin production deployments do not require cross-origin CORS origins", () => {
+  const previousOrigin = process.env.CORS_ORIGIN;
+  const previousEnvironment = process.env.NODE_ENV;
+  const previousServeFrontend = process.env.SERVE_FRONTEND;
+  try {
+    delete process.env.CORS_ORIGIN;
+    process.env.NODE_ENV = "production";
+    process.env.SERVE_FRONTEND = "true";
+    assert.deepEqual(corsOrigins(), []);
+  } finally {
+    if (previousOrigin === undefined) delete process.env.CORS_ORIGIN;
+    else process.env.CORS_ORIGIN = previousOrigin;
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    if (previousServeFrontend === undefined) delete process.env.SERVE_FRONTEND;
+    else process.env.SERVE_FRONTEND = previousServeFrontend;
+  }
+});
+
 test("optional authentication allows public access and verifies supplied tokens", async () => {
   const previousSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = "test-secret-for-shared-middleware";
