@@ -6,12 +6,37 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
 const backendRoot = fileURLToPath(new URL("../", import.meta.url));
-dotenv.config({ path: path.join(backendRoot, ".env") });
+const isRender = process.env.RENDER === "true";
+if (!isRender) dotenv.config({ path: path.join(backendRoot, ".env") });
+if (isRender && process.env.NODE_ENV !== "production") {
+  console.warn("Render runtime detected; using NODE_ENV=production.");
+  process.env.NODE_ENV = "production";
+}
 const isProduction = process.env.NODE_ENV === "production";
 
 if (!isProduction && !existsSync(path.join(backendRoot, ".env"))) {
   console.error("Backend .env is missing. Copy .env.example to .env and set a unique JWT_SECRET first.");
   process.exit(1);
+}
+
+if (isRender) {
+  const requiredProductionEnv = [
+    "JWT_SECRET",
+    "CORS_ORIGIN",
+    "MONGO_AUTH_URI",
+    "MONGO_STUDENTS_URI",
+    "MONGO_COURSES_URI",
+    "MONGO_ENROLLMENTS_URI",
+    "MONGO_NOTIFICATIONS_URI",
+    "MONGO_PROGRESS_URI",
+    "MONGO_ANALYTICS_URI",
+    "RABBITMQ_URL"
+  ];
+  const missing = requiredProductionEnv.filter(name => !process.env[name]?.trim());
+  if (missing.length) {
+    console.error(`Missing required Render environment variables: ${missing.join(", ")}`);
+    process.exit(1);
+  }
 }
 
 function run(command, args, options) {

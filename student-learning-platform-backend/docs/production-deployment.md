@@ -38,7 +38,7 @@ The included Compose file is for local development only. Its MongoDB has no auth
 The Blueprint is preferred because it wires the frontend API URL and backend CORS origin automatically. If you continue configuring the existing Render service instead:
 
 - For the backend web service, use the repository root, Docker runtime, **Root Directory** `student-learning-platform-backend`, **Dockerfile Path** `Dockerfile`, and **Docker Context** `.`. Those Docker paths are relative to the configured root directory. Do not use `scripts/start-project.js` as the Dockerfile or start command; the container already uses the `CMD` in `Dockerfile`.
-- Set the same backend environment variables listed in the Blueprint, including the seven `MONGO_*_URI` values, `RABBITMQ_URL`, `JWT_SECRET`, `NODE_ENV=production`, and `TRUST_PROXY_HOPS=1`. Set `CORS_ORIGIN` to the frontend's exact HTTPS origin.
+- Set the same backend environment variables listed in the Blueprint, including the seven `MONGO_*_URI` values, `RABBITMQ_URL`, `JWT_SECRET`, `NODE_ENV=production`, and `TRUST_PROXY_HOPS=1`. Set `CORS_ORIGIN` to the frontend's exact HTTPS origin. If you copied values from the local `.env.example`, change `NODE_ENV=development` to `production`; the backend now detects Render and enforces production mode automatically.
 - Create a separate Render **Static Site** for the frontend with **Root Directory** `student-learning-platform-frontend`, **Build Command** `npm ci && npm run build`, and **Publish Directory** `dist`. Add a rewrite from `/*` to `/index.html` for client-side routes, and set `VITE_API_BASE_URL` to the backend service host. Redeploy after changing this build-time variable.
 
 ## Important launch limitations
