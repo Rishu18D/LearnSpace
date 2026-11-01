@@ -17,11 +17,47 @@ export function createApp({ name, mongoUriEnv, routes, jsonLimit = "1mb" }) {
     const ready = mongoose.connection.readyState === 1;
     res.status(ready ? 200 : 503).json({ service: name, status: ready ? "ready" : "not_ready", database: ready ? "connected" : "disconnected" });
   });
+  app.use((req, res, next) => {
+    if (mongoose.connection.readyState === 1) return next();
+    return res.status(503).json({
+      error: { code: "SERVICE_NOT_READY", message: "The service database is unavailable; please try again shortly" },
+      requestId: req.requestId
+    });
+  });
   app.use("/", routes);
   app.use(notFound);
   app.use(errorHandler);
   app.locals.mongoUriEnv = mongoUriEnv;
   return app;
+}
+
+export async function connectMongoWithRetry(uri, {
+  serviceName = "Service",
+  shouldStop = () => false,
+  connect = (connectionUri, options) => mongoose.connect(connectionUri, options),
+  wait = delay => new Promise(resolve => setTimeout(resolve, delay))
+} = {}) {
+  let attempt = 0;
+  while (!shouldStop()) {
+    try {
+      await connect(uri, { serverSelectionTimeoutMS: 5000 });
+      console.log(JSON.stringify({ level: "info", service: serviceName, message: "MongoDB connected" }));
+      return true;
+    } catch (error) {
+      attempt += 1;
+      const retryInMs = Math.min(1000 * (2 ** Math.min(attempt - 1, 5)), 30000);
+      console.error(JSON.stringify({
+        level: "error",
+        service: serviceName,
+        message: "MongoDB connection failed; retrying",
+        attempt,
+        retryInMs,
+        error: error.message
+      }));
+      await wait(retryInMs);
+    }
+  }
+  return false;
 }
 
 export async function startService(app, port, { onShutdown = async () => {} } = {}) {
@@ -46,23 +82,23 @@ export async function startService(app, port, { onShutdown = async () => {} } = 
   if (!mongoUri.pathname || mongoUri.pathname === "/") {
     throw new Error(`${envName} must include the database name in the URI path`);
   }
+  const serviceName = app.locals.serviceName || "Service";
   mongoose.connection.on("disconnected", () => {
     console.error(JSON.stringify({
       level: "error",
-      service: app.locals.serviceName || "Service",
+      service: serviceName,
       message: "MongoDB connection lost; service is not ready"
     }));
   });
   mongoose.connection.on("error", error => {
     console.error(JSON.stringify({
       level: "error",
-      service: app.locals.serviceName || "Service",
+      service: serviceName,
       message: "MongoDB connection error",
       error: error.message
     }));
   });
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-  const server = app.listen(port, () => console.log(`${app.locals.serviceName || "Service"} listening on ${port}`));
+  const server = app.listen(port, () => console.log(`${serviceName} listening on ${port}`));
   let shuttingDown = false;
   const shutdown = async () => {
     if (shuttingDown) return;
@@ -81,4 +117,5 @@ export async function startService(app, port, { onShutdown = async () => {} } = 
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+  await connectMongoWithRetry(uri, { serviceName, shouldStop: () => shuttingDown });
 }

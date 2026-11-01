@@ -170,26 +170,30 @@ for (const service of services) {
 }
 
 async function waitForReadiness() {
-  const deadline = Date.now() + 120_000;
-  while (!stopping && Date.now() < deadline) {
+  let nextStatusLog = Date.now() + 30_000;
+  while (!stopping) {
     if (startupError) throw startupError;
     const results = await Promise.all(services.map(async service => {
       try {
         const response = await fetch(`http://127.0.0.1:${service.port}/health/ready`, {
           signal: AbortSignal.timeout(1500)
         });
-        return response.ok;
+        return { name: service.name, ready: response.ok };
       } catch {
-        return false;
+        return { name: service.name, ready: false };
       }
     }));
-    if (results.every(Boolean)) {
+    if (results.every(result => result.ready)) {
       console.log(`Backend ready: API Gateway at http://localhost:${gatewayPort}`);
       return;
     }
+    if (Date.now() >= nextStatusLog) {
+      const unavailable = results.filter(result => !result.ready).map(result => result.name);
+      console.warn(`Services not ready yet: ${unavailable.join(", ")}. They will keep retrying their database connections.`);
+      nextStatusLog = Date.now() + 30_000;
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  if (!stopping) throw new Error("Backend services did not become healthy within 120 seconds");
 }
 
 try {

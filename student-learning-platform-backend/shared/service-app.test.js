@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { createServer } from "node:http";
-import { createApp, startService } from "./service-app.js";
+import { connectMongoWithRetry, createApp, startService } from "./service-app.js";
 
 test("service app assigns request IDs before parsing JSON and reports invalid bodies as 400", async () => {
   const app = createApp({ name: "test-service", mongoUriEnv: "MONGO_TEST_URI", routes: express.Router() });
@@ -58,5 +58,74 @@ test("service startup requires a database name in its MongoDB URI", async () => 
     else process.env.JWT_SECRET = previousSecret;
     if (previousUri === undefined) delete process.env.MONGO_TEST_URI;
     else process.env.MONGO_TEST_URI = previousUri;
+  }
+});
+
+test("service endpoints return 503 while MongoDB is disconnected", async () => {
+  const app = createApp({ name: "test-service", mongoUriEnv: "MONGO_TEST_URI", routes: express.Router() });
+  const server = createServer(app);
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+
+  try {
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/example`);
+    const body = await response.json();
+
+    assert.equal(response.status, 503);
+    assert.equal(body.error.code, "SERVICE_NOT_READY");
+    assert.equal(response.headers.get("x-request-id"), body.requestId);
+  } finally {
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+});
+
+test("MongoDB connection retries with bounded exponential backoff", async () => {
+  const originalError = console.error;
+  const originalLog = console.log;
+  const delays = [];
+  let attempts = 0;
+  console.error = () => {};
+  console.log = () => {};
+
+  try {
+    const connected = await connectMongoWithRetry("mongodb://example.test/slp_test", {
+      serviceName: "test-service",
+      connect: async () => {
+        attempts += 1;
+        if (attempts < 4) throw new Error("temporary network failure");
+      },
+      wait: async delay => { delays.push(delay); }
+    });
+
+    assert.equal(connected, true);
+    assert.equal(attempts, 4);
+    assert.deepEqual(delays, [1000, 2000, 4000]);
+  } finally {
+    console.error = originalError;
+    console.log = originalLog;
+  }
+});
+
+test("MongoDB retries stop when service shutdown is requested", async () => {
+  const originalError = console.error;
+  const delays = [];
+  let stopping = false;
+  console.error = () => {};
+
+  try {
+    const connected = await connectMongoWithRetry("mongodb://example.test/slp_test", {
+      serviceName: "test-service",
+      shouldStop: () => stopping,
+      connect: async () => { throw new Error("temporary network failure"); },
+      wait: async delay => {
+        delays.push(delay);
+        stopping = true;
+      }
+    });
+
+    assert.equal(connected, false);
+    assert.deepEqual(delays, [1000]);
+  } finally {
+    console.error = originalError;
   }
 });

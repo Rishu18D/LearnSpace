@@ -127,12 +127,16 @@ test("single-container deployments route services locally despite external URL o
     "ANALYTICS_SERVICE_URL"
   ];
   const previousEnvironment = process.env.SERVE_FRONTEND;
+  const previousFrontendDist = process.env.FRONTEND_DIST_DIR;
   const previousFetch = globalThis.fetch;
   const actualFetch = globalThis.fetch;
   const previousValues = Object.fromEntries(serviceEnvNames.map(name => [name, process.env[name]]));
   const checkedUrls = [];
+  const frontendDist = await mkdtemp(path.join(os.tmpdir(), "learnspace-single-container-"));
+  await writeFile(path.join(frontendDist, "index.html"), "<!doctype html><title>Learnspace</title>");
 
   process.env.SERVE_FRONTEND = "true";
+  process.env.FRONTEND_DIST_DIR = frontendDist;
   serviceEnvNames.forEach(name => { process.env[name] = "https://learnspace.example.com"; });
   globalThis.fetch = async (url, options) => {
     const target = String(url);
@@ -163,8 +167,11 @@ test("single-container deployments route services locally despite external URL o
     });
   } finally {
     globalThis.fetch = previousFetch;
+    await rm(frontendDist, { recursive: true, force: true });
     if (previousEnvironment === undefined) delete process.env.SERVE_FRONTEND;
     else process.env.SERVE_FRONTEND = previousEnvironment;
+    if (previousFrontendDist === undefined) delete process.env.FRONTEND_DIST_DIR;
+    else process.env.FRONTEND_DIST_DIR = previousFrontendDist;
     serviceEnvNames.forEach(name => {
       if (previousValues[name] === undefined) delete process.env[name];
       else process.env[name] = previousValues[name];

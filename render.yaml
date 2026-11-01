@@ -5,7 +5,7 @@ services:
     rootDir: .
     dockerfilePath: Dockerfile
     dockerContext: .
-    healthCheckPath: /health/ready
+    healthCheckPath: /health/live
     envVars:
       - key: NODE_ENV
         value: production
