@@ -43,16 +43,34 @@ app.get("/health/ready",async(req,res)=>{
   const results=await Promise.all(services.map(async([path,target])=>{
     try{
       const response=await fetch(`${target}/health/ready`,{signal:AbortSignal.timeout(2000)});
-      return [path,response.ok];
+      let payload;
+      if(!response.ok) {
+        try {
+          payload=await response.json();
+        } catch {
+          payload=null;
+        }
+      }
+      return [path,{
+        ready:response.ok,
+        status:payload?.status==="not_ready"?"not_ready":response.ok?"ready":"unavailable",
+        ...(payload?.database==="connected"||payload?.database==="disconnected"
+          ? {database:payload.database}
+          : {})
+      }];
     }catch{
-      return [path,false];
+      return [path,{ready:false,status:"unreachable"}];
     }
   }));
-  const ready=results.every(([,isReady])=>isReady);
+  const ready=results.every(([,result])=>result.ready);
   res.status(ready?200:503).json({
     service:"api-gateway",
     status:ready?"ready":"not_ready",
-    services:Object.fromEntries(results.map(([path,isReady])=>[path.slice(5),isReady?"ready":"not_ready"]))
+    services:Object.fromEntries(results.map(([path,result])=>[path.slice(5),result.ready?"ready":"not_ready"])),
+    checks:Object.fromEntries(results.map(([path,result])=>[path.slice(5),{
+      status:result.status,
+      ...(result.database?{database:result.database}:{})
+    }]))
   });
 });
 for(const [path,target] of services){

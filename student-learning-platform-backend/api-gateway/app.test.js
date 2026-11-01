@@ -20,6 +20,11 @@ async function withServer(app, run) {
 test("gateway strips its API prefix and forwards request IDs", async () => {
   const previousAuthUrl = process.env.AUTH_SERVICE_URL;
   const upstream = express();
+  upstream.get("/health/ready", (req, res) => res.status(503).json({
+    service: "auth-service",
+    status: "not_ready",
+    database: "disconnected"
+  }));
   upstream.get("/probe", (req, res) => res.json({
     path: req.url,
     requestId: req.headers["x-request-id"],
@@ -44,8 +49,14 @@ test("gateway strips its API prefix and forwards request IDs", async () => {
         assert.equal(response.headers.get("x-request-id"), body.requestId);
 
         const readiness = await fetch(`${gatewayUrl}/health/ready`);
+        const readinessBody = await readiness.json();
         assert.equal(readiness.status, 503);
-        assert.equal((await readiness.json()).status, "not_ready");
+        assert.equal(readinessBody.status, "not_ready");
+        assert.equal(readinessBody.services.auth, "not_ready");
+        assert.deepEqual(readinessBody.checks.auth, {
+          status: "not_ready",
+          database: "disconnected"
+        });
       });
     });
   } finally {

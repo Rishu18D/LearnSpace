@@ -46,6 +46,21 @@ export async function startService(app, port, { onShutdown = async () => {} } = 
   if (!mongoUri.pathname || mongoUri.pathname === "/") {
     throw new Error(`${envName} must include the database name in the URI path`);
   }
+  mongoose.connection.on("disconnected", () => {
+    console.error(JSON.stringify({
+      level: "error",
+      service: app.locals.serviceName || "Service",
+      message: "MongoDB connection lost; service is not ready"
+    }));
+  });
+  mongoose.connection.on("error", error => {
+    console.error(JSON.stringify({
+      level: "error",
+      service: app.locals.serviceName || "Service",
+      message: "MongoDB connection error",
+      error: error.message
+    }));
+  });
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
   const server = app.listen(port, () => console.log(`${app.locals.serviceName || "Service"} listening on ${port}`));
   let shuttingDown = false;
