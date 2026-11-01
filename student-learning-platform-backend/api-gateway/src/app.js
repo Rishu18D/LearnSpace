@@ -17,6 +17,8 @@ if (process.env.TRUST_PROXY_HOPS !== undefined) {
   if (!Number.isInteger(hops) || hops < 0) throw new Error("TRUST_PROXY_HOPS must be a non-negative integer");
   app.set("trust proxy", hops);
 }
+const serviceUrl=(envName,defaultUrl)=>
+  process.env.SERVE_FRONTEND==="true" ? defaultUrl : process.env[envName]||defaultUrl;
 app.use(helmet());
 app.use(cors({origin:corsOrigins(),credentials:true}));
 app.use((req,res,next)=>{
@@ -31,13 +33,13 @@ app.use("/api/auth/login",rateLimit({windowMs:15*60*1000,limit:10,standardHeader
 app.use("/api/auth/register",rateLimit({windowMs:60*60*1000,limit:10,standardHeaders:true,legacyHeaders:false}));
 app.get("/health/live",(req,res)=>res.json({service:"api-gateway",status:"alive"}));
 const services=[
-  ["/api/auth",process.env.AUTH_SERVICE_URL||"http://localhost:3002"],
-  ["/api/students",process.env.STUDENT_SERVICE_URL||"http://localhost:3001"],
-  ["/api/courses",process.env.COURSE_SERVICE_URL||"http://localhost:3003"],
-  ["/api/enrollments",process.env.ENROLLMENT_SERVICE_URL||"http://localhost:3004"],
-  ["/api/notifications",process.env.NOTIFICATION_SERVICE_URL||"http://localhost:3005"],
-  ["/api/progress",process.env.PROGRESS_SERVICE_URL||"http://localhost:3006"],
-  ["/api/analytics",process.env.ANALYTICS_SERVICE_URL||"http://localhost:3007"]
+  ["/api/auth",serviceUrl("AUTH_SERVICE_URL","http://localhost:3002")],
+  ["/api/students",serviceUrl("STUDENT_SERVICE_URL","http://localhost:3001")],
+  ["/api/courses",serviceUrl("COURSE_SERVICE_URL","http://localhost:3003")],
+  ["/api/enrollments",serviceUrl("ENROLLMENT_SERVICE_URL","http://localhost:3004")],
+  ["/api/notifications",serviceUrl("NOTIFICATION_SERVICE_URL","http://localhost:3005")],
+  ["/api/progress",serviceUrl("PROGRESS_SERVICE_URL","http://localhost:3006")],
+  ["/api/analytics",serviceUrl("ANALYTICS_SERVICE_URL","http://localhost:3007")]
 ];
 app.get("/health/ready",async(req,res)=>{
   const results=await Promise.all(services.map(async([path,target])=>{

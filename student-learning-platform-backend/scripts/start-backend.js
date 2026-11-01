@@ -14,6 +14,18 @@ if (isRender && process.env.NODE_ENV !== "production") {
 }
 const isProduction = process.env.NODE_ENV === "production";
 
+if (process.env.SERVE_FRONTEND === "true") {
+  Object.assign(process.env, {
+    AUTH_SERVICE_URL: "http://localhost:3002",
+    STUDENT_SERVICE_URL: "http://localhost:3001",
+    COURSE_SERVICE_URL: "http://localhost:3003",
+    ENROLLMENT_SERVICE_URL: "http://localhost:3004",
+    NOTIFICATION_SERVICE_URL: "http://localhost:3005",
+    PROGRESS_SERVICE_URL: "http://localhost:3006",
+    ANALYTICS_SERVICE_URL: "http://localhost:3007"
+  });
+}
+
 if (!isProduction && !existsSync(path.join(backendRoot, ".env"))) {
   console.error("Backend .env is missing. Copy .env.example to .env and set a unique JWT_SECRET first.");
   process.exit(1);

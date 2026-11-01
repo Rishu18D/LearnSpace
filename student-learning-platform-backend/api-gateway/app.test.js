@@ -115,3 +115,59 @@ test("gateway serves the frontend SPA on the same origin and keeps API misses as
     else process.env.NODE_ENV = previousEnvironment;
   }
 });
+
+test("single-container deployments route services locally despite external URL overrides", async () => {
+  const serviceEnvNames = [
+    "AUTH_SERVICE_URL",
+    "STUDENT_SERVICE_URL",
+    "COURSE_SERVICE_URL",
+    "ENROLLMENT_SERVICE_URL",
+    "NOTIFICATION_SERVICE_URL",
+    "PROGRESS_SERVICE_URL",
+    "ANALYTICS_SERVICE_URL"
+  ];
+  const previousEnvironment = process.env.SERVE_FRONTEND;
+  const previousFetch = globalThis.fetch;
+  const actualFetch = globalThis.fetch;
+  const previousValues = Object.fromEntries(serviceEnvNames.map(name => [name, process.env[name]]));
+  const checkedUrls = [];
+
+  process.env.SERVE_FRONTEND = "true";
+  serviceEnvNames.forEach(name => { process.env[name] = "https://learnspace.example.com"; });
+  globalThis.fetch = async (url, options) => {
+    const target = String(url);
+    if (!/^http:\/\/localhost:300[1-7]\/health\/ready$/.test(target)) {
+      return actualFetch(url, options);
+    }
+    checkedUrls.push(target);
+    return new Response(JSON.stringify({ status: "ready" }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  try {
+    const { default: app } = await import(`./src/app.js?single-container-test=${Date.now()}`);
+    await withServer(app, async gatewayUrl => {
+      const response = await fetch(`${gatewayUrl}/health/ready`);
+      assert.equal(response.status, 200);
+      assert.deepEqual(checkedUrls.sort(), [
+        "http://localhost:3001/health/ready",
+        "http://localhost:3002/health/ready",
+        "http://localhost:3003/health/ready",
+        "http://localhost:3004/health/ready",
+        "http://localhost:3005/health/ready",
+        "http://localhost:3006/health/ready",
+        "http://localhost:3007/health/ready"
+      ]);
+    });
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousEnvironment === undefined) delete process.env.SERVE_FRONTEND;
+    else process.env.SERVE_FRONTEND = previousEnvironment;
+    serviceEnvNames.forEach(name => {
+      if (previousValues[name] === undefined) delete process.env[name];
+      else process.env[name] = previousValues[name];
+    });
+  }
+});
