@@ -17,7 +17,7 @@ async function withServer(app, run) {
   }
 }
 
-test("lesson completion rejects a lesson that is not in the enrolled course", async () => {
+test("lesson completion rejects content from an unpublished module", async () => {
   const previousSecret = process.env.JWT_SECRET;
   const originalFetch = globalThis.fetch;
   const originalFindOne = Progress.findOne;
@@ -35,8 +35,12 @@ test("lesson completion rejects a lesson that is not in the enrolled course", as
         enrollments: [{ courseId, status: "active" }]
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
+    const lessonId = "507f1f77bcf86cd799439088";
     return new Response(JSON.stringify({
-      course: { lessons: [{ _id: "507f1f77bcf86cd799439099" }] }
+      course: {
+        modules: [{ published: false, lessons: [{ _id: lessonId }] }],
+        lessons: [{ _id: lessonId, moduleId: "507f1f77bcf86cd799439077" }]
+      }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
   Progress.findOneAndUpdate = async () => {
@@ -71,7 +75,7 @@ test("lesson completion rejects a lesson that is not in the enrolled course", as
   }
 });
 
-test("lesson completion records a course lesson after enrollment and membership checks", async () => {
+test("lesson completion records a published module lesson after enrollment checks", async () => {
   const previousSecret = process.env.JWT_SECRET;
   const originalFetch = globalThis.fetch;
   const originalFindOne = Progress.findOne;
@@ -87,7 +91,11 @@ test("lesson completion records a course lesson after enrollment and membership 
       status: 200,
       headers: { "content-type": "application/json" }
     })
-      : new Response(JSON.stringify({ course: { lessons: [{ _id: lessonId }] } }), {
+      : new Response(JSON.stringify({
+        course: {
+          modules: [{ published: true, lessons: [{ _id: lessonId, published: true }] }]
+        }
+      }), {
       status: 200,
       headers: { "content-type": "application/json" }
     });

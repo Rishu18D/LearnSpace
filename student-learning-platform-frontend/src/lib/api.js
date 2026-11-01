@@ -141,9 +141,17 @@ export const studentApi = {
   update: data => api("/students/me", { method: "PATCH", body: data })
 };
 export const enrollmentApi = {
-  mine: () => api("/enrollments/me?limit=100"),
+  mine: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries({ limit: "100", ...params }).forEach(([key, value]) => {
+      if (value !== "" && value !== undefined && value !== null) query.set(key, value);
+    });
+    return api(`/enrollments/me?${query}`);
+  },
+  summary: () => api("/enrollments/me/summary"),
   enroll: courseId => api("/enrollments", { method: "POST", body: { courseId } }),
-  cancel: id => api(`/enrollments/${id}`, { method: "PATCH", body: { status: "cancelled" } })
+  cancel: id => api(`/enrollments/${id}`, { method: "PATCH", body: { status: "cancelled" } }),
+  complete: id => api(`/enrollments/${id}`, { method: "PATCH", body: { status: "completed" } })
 };
 export const progressApi = {
   mine: () => api("/progress/me"),
@@ -158,10 +166,18 @@ export const progressApi = {
   })
 };
 export const notificationApi = {
-  list: () => api("/notifications?limit=100"),
-  read: id => api(`/notifications/${id}/read`, { method: "PATCH" })
+  list: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries({ limit: "20", ...params }).forEach(([key, value]) => {
+      if (value !== "" && value !== undefined && value !== null) query.set(key, value);
+    });
+    return api(`/notifications?${query}`);
+  },
+  read: id => api(`/notifications/${id}/read`, { method: "PATCH" }),
+  readAll: () => api("/notifications/read-all", { method: "PATCH" })
 };
 export const analyticsApi = {
   student: () => api("/analytics/student"),
-  instructor: () => api("/analytics/instructor")
+  instructor: () => api("/analytics/instructor"),
+  admin: () => api("/analytics/admin")
 };

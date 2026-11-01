@@ -1,13 +1,13 @@
 import {useEffect,useState} from "react";
-import {ArrowRight,BookOpen,CheckCircle2,Compass,Flame,Search,SlidersHorizontal,Bell,UserRound,Save,GraduationCap,Trash2,Edit3,Plus,ChartNoAxesCombined,CheckCheck,LockKeyhole} from "lucide-react";
+import {ArrowRight,BookOpen,CheckCircle2,Compass,Flame,Search,SlidersHorizontal,Bell,UserRound,Save,GraduationCap,Trash2,Edit3,Plus,ChartNoAxesCombined,CheckCheck,LockKeyhole,RefreshCw,Users,Archive,BookCheck} from "lucide-react";
 import {Link,useParams,useNavigate} from "react-router-dom";
 import Layout from "../components/Layout";
 import {CourseCard,Empty,Notice,Spinner} from "../components/UI";
 import {courseApi,enrollmentApi,progressApi,studentApi,notificationApi,analyticsApi} from "../lib/api";
 import {useAuth} from "../context/AuthContext";
 import "./CourseEditor.css";
+import "./Analytics.css";
 
-export function Dashboard(){const{user}=useAuth();const[data,setData]=useState({courses:[],enrollments:[],progress:0,unread:0});const[loading,setLoading]=useState(true);const[error,setError]=useState("");useEffect(()=>{Promise.allSettled([courseApi.list({limit:3}),enrollmentApi.mine(),progressApi.mine(),notificationApi.list()]).then(([c,e,p,n])=>{setData({courses:c.status==="fulfilled"?c.value.courses||[]:[],enrollments:e.status==="fulfilled"?e.value.enrollments||[]:[],progress:p.status==="fulfilled"?p.value.completedLessons||0:0,unread:n.status==="fulfilled"?n.value.unread||0:0});if([c,e,p,n].every(x=>x.status==="rejected"))setError("Dashboard could not load. Check that backend services are running.")}).finally(()=>setLoading(false))},[]);const active=data.enrollments.filter(e=>e.status==="active");return <Layout><Heading kicker="YOUR LEARNING OVERVIEW" title={`Good ${new Date().getHours()<12?"morning":new Date().getHours()<18?"afternoon":"evening"}, ${(user?.name||"learner").split(" ")[0]}`} subtitle="Every small step counts. Here's where your learning stands." action={<Link className="btn primary" to="/courses"><Compass size={16}/> Explore courses</Link>}/>{error&&<Notice type="error">{error}</Notice>}{loading?<Spinner label="Gathering your learning overview..."/>:<><div className="stats"><Stat icon={BookOpen} label="Active courses" value={active.length} foot="Your current learning paths"/><Stat icon={CheckCircle2} label="Lessons completed" value={data.progress} foot="Every lesson moves you forward"/><Stat icon={Flame} label="Unread updates" value={data.unread} foot="Keep up with your activity"/></div><Section title="Your learning" kicker="PICK UP THE PACE" link="/my-learning" linkText="View all"/>{active.length===0?<div className="soft-empty"><BookOpen/><div><b>Your learning space is ready.</b><p>Enroll in a course to start building progress.</p></div><Link className="btn outline" to="/courses">Find a course <ArrowRight size={15}/></Link></div>:<div className="rows">{active.slice(0,4).map(e=><div className="simple-row" key={e._id}><span className="row-icon"><BookOpen/></span><div><b>Course {e.courseId.slice(-6)}</b><small>Enrolled {new Date(e.enrolledAt||e.createdAt).toLocaleDateString()}</small></div><span className="status active">In progress</span><Link to="/my-learning"><ArrowRight size={16}/></Link></div>)}</div>}<Section title="Explore something new" kicker="CURATED FOR YOUR CURIOSITY" link="/courses" linkText="All courses"/>{data.courses.length?<div className="course-grid">{data.courses.map((c,i)=><CourseCard key={c._id} course={c} index={i}/>)}</div>:<Empty title="Your next course is waiting" text="Published courses will appear here." action="Browse courses"/>}<div className="quote"><span>✦</span><div><b>Consistency beats intensity.</b><p>You don't need a perfect study session. Just begin with the next small step.</p></div></div></>}</Layout>}
 function Heading({kicker,title,subtitle,action}){return <div className="page-heading"><div><span className="eyebrow">{kicker}</span><h1>{title}<em>.</em></h1><p>{subtitle}</p></div>{action}</div>}
 function Section({title,kicker,link,linkText}){return <div className="section-head"><div><span className="eyebrow">{kicker}</span><h2>{title}</h2></div>{link&&<Link to={link} className="inline-link">{linkText} <ArrowRight size={15}/></Link>}</div>}
 function Stat({icon:Icon,label,value,foot}){return <article className="stat"><span className="stat-icon"><Icon size={19}/></span><small>{label}</small><strong>{value}</strong><p>{foot}</p></article>}
@@ -85,4 +85,73 @@ export function ManageCourses(){
   return <Layout><Heading kicker="INSTRUCTOR WORKSPACE" title="Manage courses" subtitle="Create detailed lessons, then publish your course for everyone to read." action={<button className="btn primary" onClick={()=>open()}><Plus size={16}/> Create course</button>}/>{error&&<Notice type="error">{error}</Notice>}{success&&<Notice type="success">{success}</Notice>}{loading?<Spinner/>:courses.length===0?<Empty title="Your course studio is ready" text="Create your first course and start shaping a learning experience." action="Create a course" to="/manage-courses"/>:<div className="panel manage-list">{courses.map(c=><article key={c._id}><span className="row-icon"><BookOpen size={20}/></span><div><b>{c.title}</b><small>{c.category} · {c.lessons?.length||0} lessons</small></div><span className={`status ${c.published?"active":"draft"}`}>{c.published?"Published":"Draft"}</span><button className="icon-btn" onClick={()=>open(c)} title="Edit"><Edit3 size={16}/></button><button className="icon-btn danger" onClick={()=>remove(c)} title="Delete"><Trash2 size={16}/></button><button className="btn outline small" onClick={()=>publish(c)}>{c.published?"Unpublish":"Publish"}</button></article>)}</div>}{show&&<div className="modal-bg" onMouseDown={e=>e.target===e.currentTarget&&setShow(false)}><section className="modal"><div className="modal-head"><div><span className="eyebrow">COURSE EDITOR</span><h2>{editing?"Edit course":"Create a course"}</h2></div><button className="icon-btn" onClick={()=>setShow(false)}>×</button></div>{error&&<Notice type="error">{error}</Notice>}<form className="form settings" onSubmit={submit}><label>Course title</label><input className="text-input" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} minLength={3} maxLength={160} required/><label>Course description</label><textarea className="text-input" rows="3" maxLength={5000} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="What will students learn in this course?" required/><label>Category</label><input className="text-input" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} maxLength={80} required/><label>Level</label><select className="text-input" value={form.level} onChange={e=>setForm({...form,level:e.target.value})}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select><div className="lesson-editor-heading"><div><label>Course lessons</label><small>Add a title, short summary, and full lesson content for each lesson.</small></div><button type="button" className="btn outline small" disabled={form.lessons.length>=200} onClick={()=>setForm({...form,lessons:[...form.lessons,{title:"",description:"",content:""}]})}><Plus size={14}/> Add lesson</button></div>{form.lessons.map((lesson,index)=><article className="lesson-editor-card" key={index}><div className="lesson-editor-title"><b>Lesson {index+1}</b><button type="button" className="text-btn danger" onClick={()=>setForm({...form,lessons:form.lessons.filter((_,i)=>i!==index)})}><Trash2 size={14}/> Remove</button></div><label>Lesson title</label><input className="text-input" value={lesson.title} onChange={e=>setForm({...form,lessons:form.lessons.map((item,i)=>i===index?{...item,title:e.target.value}:item)})} maxLength={160} placeholder="e.g. Introduction to the topic" required/><label>Short summary</label><textarea className="text-input" rows="2" maxLength={2000} value={lesson.description} onChange={e=>setForm({...form,lessons:form.lessons.map((item,i)=>i===index?{...item,description:e.target.value}:item)})} placeholder="What will this lesson cover?"/><label>Lesson content <small>Text and line breaks are displayed to readers.</small></label><textarea className="text-input lesson-content-input" rows="8" maxLength={20000} value={lesson.content} onChange={e=>setForm({...form,lessons:form.lessons.map((item,i)=>i===index?{...item,content:e.target.value}:item)})} placeholder="Write the full lesson here. You can include explanations, examples, and exercises."/></article>)}{form.lessons.length===0&&<p className="fineprint">No lessons yet. Add lessons to give readers course material.</p>}<div className="modal-actions"><button type="button" className="btn ghost" onClick={()=>setShow(false)}>Cancel</button><button className="btn primary" disabled={busy}>{busy?"Saving...":"Save course"}</button></div></form><p className="fineprint">Publish your course when it is ready for anyone to read.</p></section></div>}</Layout>
 }
 
-export function Analytics(){const[summary,setSummary]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(true);useEffect(()=>{analyticsApi.instructor().then(r=>setSummary(r.summary)).catch(e=>setError(e.message)).finally(()=>setLoading(false))},[]);return <Layout><Heading kicker="INSIGHTS & ACTIVITY" title="Analytics" subtitle="A quick look at your course creation activity."/>{error&&<Notice type="error">{error}</Notice>}{loading?<Spinner/>:summary&&<div className="stats"><Stat icon={BookOpen} label="Courses managed" value={summary.coursesManaged} foot="In your workspace"/><Stat icon={CheckCircle2} label="Published courses" value={summary.publishedCourses} foot="Visible in the library"/><Stat icon={ChartNoAxesCombined} label="Draft courses" value={summary.coursesManaged-summary.publishedCourses} foot="Still being prepared"/></div>}<div className="quote"><span>✦</span><div><b>More insights are on the way.</b><p>Student engagement and completion trends require a dedicated analytics model in the backend.</p></div></div></Layout>}
+export function Analytics(){
+  const {user}=useAuth();
+  const [summary,setSummary]=useState(null);
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(true);
+  const [retry,setRetry]=useState(0);
+  const [updatedAt,setUpdatedAt]=useState(null);
+
+  useEffect(()=>{
+    let live=true;
+    setLoading(true);
+    setError("");
+    setSummary(null);
+    setUpdatedAt(null);
+    const request=user?.role==="student"
+      ? analyticsApi.student()
+      : user?.role==="admin"
+        ? analyticsApi.admin()
+        : analyticsApi.instructor();
+    request
+      .then(result=>{
+        if(live){
+          setSummary(result.summary);
+          setUpdatedAt(new Date());
+        }
+      })
+      .catch(error=>live&&setError(error.message))
+      .finally(()=>live&&setLoading(false));
+    return()=>{live=false};
+  },[retry,user?.role]);
+
+  const isStudent=user?.role==="student";
+  const isAdmin=user?.role==="admin";
+  const title=isStudent?"Your learning analytics":isAdmin?"Platform analytics":"Course analytics";
+  const subtitle=isStudent
+    ?"See your learning activity and the progress you have made."
+    :isAdmin
+      ?"A live overview of learner profiles and course publishing."
+      :"A live overview of your course portfolio.";
+
+  return <Layout>
+    <Heading kicker="INSIGHTS & ACTIVITY" title={title} subtitle={subtitle}
+      action={<button className="btn outline analytics-refresh" type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}><RefreshCw size={15} className={loading?"analytics-spin":""}/>{loading?"Updating":"Refresh"}</button>}/>
+    {updatedAt&&!loading&&<p className="analytics-updated" aria-live="polite">Updated {updatedAt.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</p>}
+    {error&&<><Notice type="error">{error}</Notice><button className="btn outline analytics-retry" type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}>Try again</button></>}
+    {loading?<Spinner label="Loading your analytics..."/>:summary&&<>
+      {isStudent
+        ? <div className="stats analytics-stats">
+            <Stat icon={BookOpen} label="Active courses" value={summary.activeEnrollments} foot="Courses you are learning now"/>
+            <Stat icon={BookCheck} label="Total enrollments" value={summary.totalEnrollments} foot="Your learning courses, past and present"/>
+            <Stat icon={CheckCircle2} label="Lessons completed" value={summary.completedLessons} foot="Your learning milestones"/>
+            <Stat icon={Bell} label="Unread notifications" value={summary.unreadNotifications} foot="Updates waiting for you"/>
+          </div>
+        : <div className="stats analytics-stats">
+            {isAdmin&&<Stat icon={Users} label="Student profiles" value={summary.studentProfiles} foot="Profiles created on Learnspace"/>}
+            <Stat icon={BookOpen} label={isAdmin?"Courses on platform":"Courses managed"} value={summary.coursesManaged} foot={isAdmin?"Active, non-archived courses":"Your active course portfolio"}/>
+            <Stat icon={CheckCircle2} label="Published courses" value={summary.publishedCourses} foot="Available in the course library"/>
+            <Stat icon={ChartNoAxesCombined} label="Draft courses" value={summary.draftCourses} foot="Not yet visible to learners"/>
+            <Stat icon={Archive} label="Archived courses" value={summary.archivedCourses} foot="Kept out of the active library"/>
+          </div>}
+      {isStudent
+        ? summary.totalEnrollments===0
+          ? <div className="analytics-empty"><BookOpen size={22}/><div><b>Your learning story starts here.</b><p>Enroll in a course to see your progress and milestones in this space.</p></div><Link className="btn primary" to="/courses">Explore courses <ArrowRight size={15}/></Link></div>
+          : <div className="analytics-note"><span aria-hidden="true">✦</span><div><b>Keep your momentum going.</b><p>Your figures update as you complete lessons and courses. Pick up where you left off in <Link to="/my-learning">My learning</Link>.</p></div></div>
+        : summary.coursesManaged===0
+          ? <div className="analytics-empty"><GraduationCap size={22}/><div><b>No active courses yet.</b><p>{isAdmin?"Create a course to start building the learning library.":"Create your first course to start building your learning portfolio."}</p></div><Link className="btn primary" to="/manage-courses">Manage courses <ArrowRight size={15}/></Link></div>
+          : <div className="analytics-note"><span aria-hidden="true">✦</span><div><b>Course health at a glance.</b><p>These counts are live and exclude archived courses from your active portfolio. Learner engagement and completion trends are not yet collected in the reporting data.</p></div></div>}
+    </>}
+  </Layout>;
+}

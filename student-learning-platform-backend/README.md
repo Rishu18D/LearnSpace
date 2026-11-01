@@ -104,8 +104,8 @@ Invoke-RestMethod http://localhost:3000/api/courses
 - `POST /api/students`, `GET /api/students/me`, `PATCH /api/students/me`, `GET /api/students/:id`
 - `GET /api/courses`, `GET /api/courses/:id-or-slug`, `GET /api/courses/manage/mine`, `POST /api/courses`, `PATCH /api/courses/:id`, `DELETE /api/courses/:id` (archives)
 - `POST /api/courses/:id/duplicate`, `POST /api/courses/manage/import`, quiz retrieval, submission, attempt history, and instructor review endpoints
-- `POST /api/enrollments`, `GET /api/enrollments/me`, `GET /api/enrollments/:id`, `PATCH /api/enrollments/:id`
-- `GET /api/notifications`, `PATCH /api/notifications/:id/read`
+- `POST /api/enrollments`, `GET /api/enrollments/me`, `GET /api/enrollments/me/summary`, `GET /api/enrollments/:id`, `PATCH /api/enrollments/:id`
+- `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/read-all`
 - `GET /api/progress/me`, `GET /api/progress/courses/:courseId`, `POST /api/progress/lessons/:lessonId/complete`
 - `POST /api/progress/courses/:courseId/lessons/:lessonId/access`
 - `GET /api/analytics/student`, `GET /api/analytics/instructor`, `GET /api/analytics/admin`
@@ -117,7 +117,7 @@ Invoke-RestMethod http://localhost:3000/api/courses
 - Instructors can sign up publicly and publish courses. This is intentional for the current launch model; add approval and moderation if open publishing is no longer acceptable.
 - Refresh tokens are rotated in HttpOnly cookies; access tokens last 15 minutes. The browser still stores short-lived access tokens in local storage.
 - The enrollment event publisher is best-effort in this starter. A production implementation should use a transactional outbox and retries; a MongoDB record and RabbitMQ publish are not one atomic transaction.
-- Analytics is a live API aggregation starter, not a materialized analytics read model. The admin endpoint intentionally does not invent totals.
+- Analytics combines live service totals for student, instructor, and admin views. Learner engagement and time-based trends are not reported until those events are collected.
 - When `REDIS_URL` is configured, the course service caches public catalog and published course-detail responses for 60 seconds. Authenticated course views bypass this shared cache; Redis failures are logged and requests fall back to MongoDB.
 - The services use one MongoDB server with separate logical databases for local development. Production should use per-service credentials and stricter network boundaries.
 - The notification consumer starts with the Notification Service. Repeated poison messages are rejected without requeue in this starter; a configured dead-letter exchange and operational replay process should be added before production.

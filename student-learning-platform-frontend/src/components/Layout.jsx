@@ -25,8 +25,9 @@ export default function Layout({ children }) {
     ["/notifications", "Notifications", Bell],
     ["/profile", "My profile", UserRound],
     ...(user?.role === "instructor" || user?.role === "admin"
-      ? [["/manage-courses", "Manage courses", GraduationCap], ["/analytics", "Analytics", ChartNoAxesCombined]]
-      : [])
+      ? [["/manage-courses", "Manage courses", GraduationCap]]
+      : []),
+    ["/analytics", "Analytics", ChartNoAxesCombined]
   ];
   const initials = (user?.name || user?.email || "LS")
     .split(/[\s@]+/)

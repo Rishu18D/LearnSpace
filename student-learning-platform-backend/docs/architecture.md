@@ -14,7 +14,7 @@ The browser talks only to the API Gateway. The Gateway proxies each `/api/<servi
 - Enrollment: student/course enrollment records.
 - Notification: per-user in-app notification records.
 - Progress: per-user lesson completion records.
-- Analytics: role-checked summaries. The current implementation aggregates some service APIs synchronously.
+- Analytics: role-checked live summaries. Enrollment status totals are counted in the Enrollment Service; course and student profile totals come from service pagination metadata. Engagement and time-based trends require a future event-fed read model.
 
 ## Event flow
 

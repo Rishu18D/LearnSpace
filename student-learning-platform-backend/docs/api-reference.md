@@ -27,16 +27,18 @@ All paths below are exposed through the Gateway. Protected routes require `Autho
 | GET | `/api/courses/:id/attempts/pending` | Course owner/admin | List pending subjective responses for instructor review |
 | PATCH | `/api/courses/:id/quizzes/:quizId/attempts/:attemptId/review` | Course owner/admin | Review subjective answers |
 | POST | `/api/enrollments` | Student | Enroll using `{ "courseId": "<id>" }` |
-| GET | `/api/enrollments/me` | Authenticated | Own enrollments; optionally filter by `courseId` |
+| GET | `/api/enrollments/me` | Authenticated | Own paginated enrollments; optionally filter by `courseId` and status |
+| GET | `/api/enrollments/me/summary` | Authenticated | Exact counts of own active, completed, cancelled, and total enrollments |
 | GET | `/api/enrollments/:id` | Owner/admin | Enrollment details |
-| PATCH | `/api/enrollments/:id` | Owner/admin | Cancel enrollment |
-| GET | `/api/notifications` | Authenticated | Own notification feed |
+| PATCH | `/api/enrollments/:id` | Owner/admin | Cancel an active enrollment, or mark it complete after every published lesson is verified complete |
+| GET | `/api/notifications` | Authenticated | Own paginated notification feed; optionally filter by `status=unread` or `status=read`; includes overall status counts |
 | PATCH | `/api/notifications/:id/read` | Owner | Mark notification read |
+| PATCH | `/api/notifications/read-all` | Authenticated | Mark all of the current user's unread notifications as read |
 | GET | `/api/progress/me` | Authenticated | Own progress |
 | POST | `/api/progress/lessons/:lessonId/complete` | Authenticated and enrolled | Complete lesson |
 | POST | `/api/progress/courses/:courseId/lessons/:lessonId/access` | Student with active enrollment | Save last lesson accessed |
-| GET | `/api/analytics/student` | Authenticated | Student summary |
-| GET | `/api/analytics/instructor` | Instructor/admin | Course summary |
-| GET | `/api/analytics/admin` | Admin | Placeholder for aggregate read model |
+| GET | `/api/analytics/student` | Authenticated | Own active/completed/total enrollments, completed lessons, and unread notifications |
+| GET | `/api/analytics/instructor` | Instructor/admin | Managed, published, draft, and archived course totals |
+| GET | `/api/analytics/admin` | Admin | Platform student-profile and course publishing totals |
 
 Validation errors use a JSON `error` object. Authenticated service routes return `401` for missing/invalid tokens and `403` for insufficient permission. Not every route has a complete formal OpenAPI schema yet.

@@ -2,7 +2,10 @@ import { Component } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Landing, Login, Register } from "./pages/PublicPages";
-import { Analytics, Courses, Dashboard, MyLearning, Notifications, Profile } from "./pages/LearningPages";
+import { Analytics, Courses, Profile } from "./pages/LearningPages";
+import Dashboard from "./pages/Dashboard";
+import MyLearning from "./pages/MyLearning";
+import Notifications from "./pages/Notifications";
 import CourseStudio from "./pages/CourseStudio";
 import CourseLearning from "./pages/CourseLearning";
 import CourseOverview from "./pages/CourseOverview";
@@ -58,6 +61,8 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute roles={["instructor", "admin"]} />}>
           <Route path="/manage-courses" element={<CourseStudio />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
         </Route>
         <Route path="/home" element={<Navigate to="/dashboard" replace />} />

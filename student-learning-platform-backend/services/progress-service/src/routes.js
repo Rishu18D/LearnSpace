@@ -5,6 +5,18 @@ import { asyncHandler, authenticate, allowRoles, parseObjectId } from "@slp/comm
 
 const router=Router();
 
+function getPublishedLessons(course) {
+  const modules=Array.isArray(course?.modules)?course.modules:[];
+  if(modules.length) {
+    return modules
+      .filter(module=>module?.published!==false&&!module?.archived)
+      .flatMap(module=>(Array.isArray(module.lessons)?module.lessons:[])
+        .filter(lesson=>lesson?.published!==false&&!lesson?.archived));
+  }
+  return (Array.isArray(course?.lessons)?course.lessons:[])
+    .filter(lesson=>lesson?.published!==false&&!lesson?.archived);
+}
+
 async function verifyLessonAccess(req,courseId,lessonId) {
   let enrollmentResponse;
   try {
@@ -43,8 +55,7 @@ async function verifyLessonAccess(req,courseId,lessonId) {
   } catch {
     return {status:503,code:"COURSE_CHECK_FAILED",message:"Unable to verify course lesson"};
   }
-  if(!Array.isArray(courseBody?.course?.lessons)) return {status:503,code:"COURSE_CHECK_FAILED",message:"Unable to verify course lesson"};
-  if(!courseBody.course.lessons.some(item=>String(item?._id)===lessonId)) {
+  if(!courseBody?.course || !getPublishedLessons(courseBody.course).some(item=>String(item?._id)===lessonId)) {
     return {status:404,code:"LESSON_NOT_FOUND",message:"Published lesson does not belong to this course"};
   }
   return null;

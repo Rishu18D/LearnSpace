@@ -6,13 +6,14 @@ import remarkGfm from "remark-gfm";
 import Layout from "../components/Layout";
 import { Notice, Spinner } from "../components/UI";
 import { courseApi, enrollmentApi, progressApi } from "../lib/api";
+import { getPublishedLessons } from "../lib/courseContent";
 import "./CourseLearning.css";
 
 export default function CourseLearning() {
   const { id }=useParams();
   const [course,setCourse]=useState(null);
   const [lessons,setLessons]=useState([]);
-  const [enrolled,setEnrolled]=useState(false);
+  const [enrollment,setEnrollment]=useState(null);
   const [progress,setProgress]=useState([]);
   const [currentId,setCurrentId]=useState("");
   const [quizzes,setQuizzes]=useState([]);
@@ -23,22 +24,44 @@ export default function CourseLearning() {
 
   useEffect(()=>{
     let live=true;
-    Promise.all([courseApi.get(id),enrollmentApi.mine(),progressApi.course(id)])
-      .then(([courseResult,enrollmentResult,progressResult])=>{
-        if(!live)return;
+    async function load(){
+      try{
+        const courseResult=await courseApi.get(id);
         const data=courseResult.course;
-        const moduleLessons=(data.modules||[]).flatMap(module=>(module.lessons||[]).map(lesson=>({...lesson,moduleId:module._id,moduleTitle:module.title})));
-        const items=moduleLessons.length?moduleLessons:(data.lessons||[]);
+        const [enrollmentResult,progressResult]=await Promise.all([
+          enrollmentApi.mine({courseId:data._id,limit:1}),
+          progressApi.course(data._id)
+        ]);
+        if(!live)return;
+        const items=getPublishedLessons(data);
         setCourse(data);
         setLessons(items);
         setProgress(progressResult.progress||[]);
-        setEnrolled((enrollmentResult.enrollments||[]).some(item=>item.courseId===data._id&&item.status==="active"));
-        const last=(progressResult.progress||[]).filter(item=>item.lastAccessedAt).sort((a,b)=>new Date(b.lastAccessedAt)-new Date(a.lastAccessedAt))[0];
+        const foundEnrollment=(enrollmentResult.enrollments||[]).find(item=>item.courseId===data._id&&["active","completed"].includes(item.status))||null;
+        const savedProgress=progressResult.progress||[];
+        const savedCompleted=new Set(savedProgress.filter(item=>item.completed).map(item=>String(item.lessonId)));
+        const hasCompletedAll=items.length>0&&items.every(item=>savedCompleted.has(String(item._id)));
+        let currentEnrollment=foundEnrollment;
+        if(foundEnrollment?.status==="active"&&hasCompletedAll) {
+          try {
+            const result=await enrollmentApi.complete(foundEnrollment._id);
+            currentEnrollment=result.enrollment;
+          } catch(error) {
+            if(live)setError(`All lessons are complete, but the course status could not be updated. ${error.message}`);
+          }
+        }
+        if(!live)return;
+        setEnrollment(currentEnrollment);
+        const last=savedProgress.filter(item=>item.lastAccessedAt).sort((a,b)=>new Date(b.lastAccessedAt)-new Date(a.lastAccessedAt))[0];
         const resumableLesson=items.find(item=>String(item._id)===String(last?.lessonId));
         setCurrentId(String(resumableLesson?._id||items[0]?._id||""));
-      })
-      .catch(error=>live&&setError(error.message))
-      .finally(()=>live&&setLoading(false));
+      }catch(error){
+        if(live)setError(error.message);
+      }finally{
+        if(live)setLoading(false);
+      }
+    }
+    load();
     return()=>{live=false};
   },[id]);
 
@@ -50,7 +73,7 @@ export default function CourseLearning() {
   async function selectLesson(lesson) {
     setCurrentId(String(lesson._id));
     setError("");
-    if(!enrolled)return;
+    if(enrollment?.status!=="active")return;
     try {
       const response=await progressApi.access(course._id,lesson._id);
       setProgress(items=>[...items.filter(item=>item.lessonId!==response.progress.lessonId),response.progress]);
@@ -60,13 +83,26 @@ export default function CourseLearning() {
   }
 
   async function completeLesson() {
-    if(!currentLesson||!enrolled)return;
+    if(!currentLesson||enrollment?.status!=="active")return;
     setBusy(true);
     setError("");
     try {
       const result=await progressApi.complete(currentLesson._id,course._id);
-      setProgress(items=>[...items.filter(item=>item.lessonId!==result.progress.lessonId),result.progress]);
-      setSuccess("Lesson completed. Your progress is saved.");
+      const updatedProgress=[...progress.filter(item=>String(item.lessonId)!==String(result.progress.lessonId)),result.progress];
+      setProgress(updatedProgress);
+      const completed=new Set(updatedProgress.filter(item=>item.completed).map(item=>String(item.lessonId)));
+      if(lessons.length>0&&lessons.every(item=>completed.has(String(item._id)))) {
+        try {
+          const completion=await enrollmentApi.complete(enrollment._id);
+          setEnrollment(completion.enrollment);
+          setSuccess("Course completed. Congratulations on finishing every lesson!");
+        } catch(error) {
+          setError(`Lesson saved, but the course status could not be updated. ${error.message}`);
+          return;
+        }
+      } else {
+        setSuccess("Lesson completed. Your progress is saved.");
+      }
     } catch(error) {
       setError(error.message);
     } finally {
@@ -76,19 +112,20 @@ export default function CourseLearning() {
 
   if(loading)return <Layout><Spinner label="Opening your course..."/></Layout>;
   if(!course)return <Layout><Notice type="error">{error||"Course not found."}</Notice><Link className="inline-link" to="/courses">Back to courses</Link></Layout>;
-  if(!enrolled)return <Layout><Link className="back-link" to={`/courses/${course._id}`}>← Back to course details</Link><Notice type="info"><LockKeyhole size={16}/> Enroll in this course to track progress and access assessments.</Notice><section className="learn-empty"><h1>{course.title}</h1><p>{course.description}</p><Link className="btn primary" to={`/courses/${course._id}`}>View course and enroll</Link></section></Layout>;
+  if(!enrollment)return <Layout><Link className="back-link" to={`/courses/${course._id}`}>← Back to course details</Link><Notice type="info"><LockKeyhole size={16}/> Enroll in this course to track progress and access assessments.</Notice><section className="learn-empty"><h1>{course.title}</h1><p>{course.description}</p><Link className="btn primary" to={`/courses/${course._id}`}>View course and enroll</Link></section></Layout>;
 
   return <Layout>
     <div className="learn-header"><Link className="back-link" to={`/courses/${course._id}`}>← Course overview</Link><div><span className="eyebrow">YOUR LEARNING PATH</span><h1>{course.title}<em>.</em></h1><p>{lessons.filter(item=>completedIds.has(String(item._id))).length} of {lessons.length} lessons complete</p></div><div className="learn-progress"><div className="track"><i style={{width:`${percent}%`}}/></div><b>{percent}%</b></div></div>
     {error&&<Notice type="error">{error}</Notice>}
     {success&&<Notice type="success" onClose={()=>setSuccess("")}>{success}</Notice>}
+    {enrollment.status==="completed"&&<Notice type="success">Course completed — all published lessons are finished. You can revisit the material below.</Notice>}
     <div className="learn-layout">
       <aside className="learn-outline"><h2>Course outline</h2>
-        {(course.modules||[]).length?course.modules.filter(module=>!module.archived).map(module=><section key={module._id}><h3>{module.title}</h3>{(module.lessons||[]).filter(lesson=>!lesson.archived).map(lesson=><button key={lesson._id} className={`learn-outline-item ${String(lesson._id)===String(currentId)?"selected":""}`} onClick={()=>selectLesson(lesson)}><span>{completedIds.has(String(lesson._id))?<CheckCircle2 size={16}/>:<BookOpen size={15}/>}</span>{lesson.title}</button>)}</section>):lessons.map(lesson=><button key={lesson._id} className={`learn-outline-item ${String(lesson._id)===String(currentId)?"selected":""}`} onClick={()=>selectLesson(lesson)}><span>{completedIds.has(String(lesson._id))?<CheckCircle2 size={16}/>:<BookOpen size={15}/>}</span>{lesson.title}</button>)}
+        {(course.modules||[]).some(module=>module.published!==false&&!module.archived)?course.modules.filter(module=>module.published!==false&&!module.archived).map(module=><section key={module._id}><h3>{module.title}</h3>{(module.lessons||[]).filter(lesson=>lesson.published!==false&&!lesson.archived).map(lesson=><button key={lesson._id} className={`learn-outline-item ${String(lesson._id)===String(currentId)?"selected":""}`} onClick={()=>selectLesson(lesson)}><span>{completedIds.has(String(lesson._id))?<CheckCircle2 size={16}/>:<BookOpen size={15}/>}</span>{lesson.title}</button>)}</section>):lessons.map(lesson=><button key={lesson._id} className={`learn-outline-item ${String(lesson._id)===String(currentId)?"selected":""}`} onClick={()=>selectLesson(lesson)}><span>{completedIds.has(String(lesson._id))?<CheckCircle2 size={16}/>:<BookOpen size={15}/>}</span>{lesson.title}</button>)}
         {(course.quizzes||[]).map(quiz=><button key={quiz._id} className="learn-outline-item quiz-outline" onClick={()=>setQuizzes(items=>items.some(item=>item._id===quiz._id)?items:[...items,quiz])}><span>Q</span>{quiz.title}</button>)}
       </aside>
       <main className="learn-content">
-        {currentLesson?<article className="lesson-reader"><div className="lesson-reader-meta"><span>{currentLesson.moduleTitle||"Course lesson"}</span><span><Clock3 size={14}/>{currentLesson.estimatedMinutes||10} min</span></div><h2>{currentLesson.title}</h2>{currentLesson.description&&<p className="lesson-reader-summary">{currentLesson.description}</p>}{currentLesson.learningObjectives?.length>0&&<section className="lesson-objectives"><b>By the end of this lesson, you can:</b><ul>{currentLesson.learningObjectives.map(item=><li key={item}>{item}</li>)}</ul></section>}{currentLesson.videoUrl&&<p><a href={currentLesson.videoUrl} target="_blank" rel="noreferrer">Watch lesson video</a></p>}{currentLesson.contentFormat==="text"?<div className="markdown-body plain-content">{currentLesson.content}</div>:<div className="markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content||""}</ReactMarkdown></div>}{currentLesson.resources?.length>0&&<section className="lesson-resources"><h3>Resources</h3>{currentLesson.resources.map(resource=><a key={resource._id||resource.url} href={resource.url} target="_blank" rel="noreferrer">{resource.title}</a>)}</section>}<div className="lesson-controls"><button className="btn outline" disabled={currentIndex<=0} onClick={()=>selectLesson(lessons[currentIndex-1])}><ArrowLeft size={15}/> Previous</button>{completedIds.has(String(currentLesson._id))?<span className="learn-completed"><CheckCircle2 size={17}/> Completed</span>:<button className="btn primary" disabled={busy} onClick={completeLesson}>{busy?"Saving...":"Mark lesson complete"} <CheckCircle2 size={16}/></button>}<button className="btn outline" disabled={currentIndex<0||currentIndex>=lessons.length-1} onClick={()=>selectLesson(lessons[currentIndex+1])}>Next <ArrowRight size={15}/></button></div></article>:<div className="learn-empty"><h2>No lessons are published yet.</h2><p>Check back when your instructor has published the course lessons.</p></div>}
+        {currentLesson?<article className="lesson-reader"><div className="lesson-reader-meta"><span>{currentLesson.moduleTitle||"Course lesson"}</span><span><Clock3 size={14}/>{currentLesson.estimatedMinutes||10} min</span></div><h2>{currentLesson.title}</h2>{currentLesson.description&&<p className="lesson-reader-summary">{currentLesson.description}</p>}{currentLesson.learningObjectives?.length>0&&<section className="lesson-objectives"><b>By the end of this lesson, you can:</b><ul>{currentLesson.learningObjectives.map(item=><li key={item}>{item}</li>)}</ul></section>}{currentLesson.videoUrl&&<p><a href={currentLesson.videoUrl} target="_blank" rel="noreferrer">Watch lesson video</a></p>}{currentLesson.contentFormat==="text"?<div className="markdown-body plain-content">{currentLesson.content}</div>:<div className="markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content||""}</ReactMarkdown></div>}{currentLesson.resources?.length>0&&<section className="lesson-resources"><h3>Resources</h3>{currentLesson.resources.map(resource=><a key={resource._id||resource.url} href={resource.url} target="_blank" rel="noreferrer">{resource.title}</a>)}</section>}<div className="lesson-controls"><button className="btn outline" disabled={currentIndex<=0} onClick={()=>selectLesson(lessons[currentIndex-1])}><ArrowLeft size={15}/> Previous</button>{enrollment.status==="completed"?<span className="learn-completed"><CheckCircle2 size={17}/> Course completed</span>:completedIds.has(String(currentLesson._id))?<span className="learn-completed"><CheckCircle2 size={17}/> Completed</span>:<button className="btn primary" disabled={busy} onClick={completeLesson}>{busy?"Saving...":"Mark lesson complete"} <CheckCircle2 size={16}/></button>}<button className="btn outline" disabled={currentIndex<0||currentIndex>=lessons.length-1} onClick={()=>selectLesson(lessons[currentIndex+1])}>Next <ArrowRight size={15}/></button></div></article>:<div className="learn-empty"><h2>No lessons are published yet.</h2><p>Check back when your instructor has published the course lessons.</p></div>}
       </main>
     </div>
     {quizzes.map(quiz=><QuizPanel key={quiz._id} courseId={course._id} quiz={quiz} onClose={()=>setQuizzes(items=>items.filter(item=>item._id!==quiz._id))}/>)}

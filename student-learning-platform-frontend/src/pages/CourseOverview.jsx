@@ -7,6 +7,7 @@ import Layout from "../components/Layout";
 import { Notice, Spinner } from "../components/UI";
 import { courseApi, enrollmentApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { getPublishedLessons } from "../lib/courseContent";
 import "./CourseLearning.css";
 
 export default function CourseOverview() {
@@ -21,14 +22,22 @@ export default function CourseOverview() {
 
   useEffect(()=>{
     let live=true;
-    Promise.all([
-      courseApi.get(id),
-      isAuthenticated?enrollmentApi.mine():Promise.resolve({enrollments:[]})
-    ]).then(([courseResult,enrollmentResult])=>{
-      if(!live)return;
-      setCourse(courseResult.course);
-      setEnrollment((enrollmentResult.enrollments||[]).find(item=>item.courseId===courseResult.course._id&&item.status==="active")||null);
-    }).catch(error=>live&&setError(error.message)).finally(()=>live&&setLoading(false));
+    async function load(){
+      try{
+        const courseResult=await courseApi.get(id);
+        const enrollmentResult=isAuthenticated
+          ? await enrollmentApi.mine({courseId:courseResult.course._id,limit:1})
+          : {enrollments:[]};
+        if(!live)return;
+        setCourse(courseResult.course);
+        setEnrollment((enrollmentResult.enrollments||[]).find(item=>["active","completed"].includes(item.status))||null);
+      }catch(error){
+        if(live)setError(error.message);
+      }finally{
+        if(live)setLoading(false);
+      }
+    }
+    load();
     return()=>{live=false};
   },[id,isAuthenticated]);
 
@@ -51,12 +60,12 @@ export default function CourseOverview() {
 
   if(loading)return <Layout><Spinner label="Loading course..."/></Layout>;
   if(!course)return <Layout><Notice type="error">{error||"Course not found."}</Notice><Link to="/courses" className="inline-link">← Back to courses</Link></Layout>;
-  const modules=(course.modules||[]).filter(module=>!module.archived);
-  const lessons=modules.length?modules.flatMap(module=>(module.lessons||[]).filter(lesson=>!lesson.archived).map(lesson=>({...lesson,moduleTitle:module.title}))):(course.lessons||[]);
+  const modules=(course.modules||[]).filter(module=>module.published!==false&&!module.archived);
+  const lessons=getPublishedLessons(course);
   return <Layout>
     <Link to="/courses" className="back-link">← Back to course library</Link>
     {error&&<Notice type="error">{error}</Notice>}
-    <section className="detail-hero"><div><div className="meta"><span className={`level ${course.level}`}>{course.level}</span><small>{course.category}</small></div><h1>{course.title}<em>.</em></h1><p>{course.description}</p><div className="detail-meta"><span><BookOpen size={15}/>{lessons.length} lessons</span><span><GraduationCap size={15}/>{Math.ceil((course.estimatedMinutes||60)/60)}h estimated</span></div>{enrollment?<Link className="btn primary big" to={`/courses/${course._id}/learn`}>Continue learning <ArrowRight size={17}/></Link>:user?.role==="student"||!isAuthenticated?<button className="btn primary big" onClick={enroll} disabled={busy}>{busy?"Enrolling...":"Enroll to track progress"} <ArrowRight size={17}/></button>:<p className="fineprint">Instructor preview · You cannot enroll using a teacher account.</p>}</div><div className="detail-art">✳<small>A NEW SKILL, IN REACH</small></div></section>
+    <section className="detail-hero"><div><div className="meta"><span className={`level ${course.level}`}>{course.level}</span><small>{course.category}</small></div><h1>{course.title}<em>.</em></h1><p>{course.description}</p><div className="detail-meta"><span><BookOpen size={15}/>{lessons.length} lessons</span><span><GraduationCap size={15}/>{Math.ceil((course.estimatedMinutes||60)/60)}h estimated</span></div>{enrollment?<Link className="btn primary big" to={`/courses/${course._id}/learn`}>{enrollment.status==="completed"?"Review completed course":"Continue learning"} <ArrowRight size={17}/></Link>:user?.role==="student"||!isAuthenticated?<button className="btn primary big" onClick={enroll} disabled={busy}>{busy?"Enrolling...":"Enroll to track progress"} <ArrowRight size={17}/></button>:<p className="fineprint">Instructor preview · You cannot enroll using a teacher account.</p>}</div><div className="detail-art">✳<small>A NEW SKILL, IN REACH</small></div></section>
     {course.learningObjectives?.length>0&&<section><div className="section-head"><div><span className="eyebrow">LEARNING OBJECTIVES</span><h2>What you'll learn</h2></div></div><ul className="course-objectives">{course.learningObjectives.map(item=><li key={item}>{item}</li>)}</ul></section>}
     {course.prerequisites?.length>0&&<section><div className="section-head"><div><span className="eyebrow">BEFORE YOU BEGIN</span><h2>Prerequisites</h2></div></div><ul className="course-objectives">{course.prerequisites.map(item=><li key={item}>{item}</li>)}</ul></section>}
     <div className="section-head"><div><span className="eyebrow">COURSE ROADMAP</span><h2>Lessons & curriculum</h2></div></div>

@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowUpRight, BookOpen, CheckCircle2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getPublishedLessons } from "../lib/courseContent";
 
 export function Logo() {
   return (
@@ -51,7 +52,7 @@ export function CourseCard({ course, index = 0, enrolled = false }) {
         <h3><Link to={coursePath}>{course.title}</Link></h3>
         <p>{course.description}</p>
         <div className="card-foot">
-          <span><BookOpen size={14} aria-hidden="true" />{course.lessons?.length || 0} lessons</span>
+          <span><BookOpen size={14} aria-hidden="true" />{getPublishedLessons(course).length} lessons</span>
           <span>{enrolled ? "Enrolled" : "Self-paced"}</span>
         </div>
       </div>

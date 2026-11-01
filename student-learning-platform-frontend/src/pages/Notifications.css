@@ -1,0 +1,86 @@
+.notification-heading-actions,
+.notification-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notification-heading-actions .btn,
+.notification-refresh {
+  white-space: nowrap;
+}
+
+.notification-toolbar {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.notification-tabs {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.notification-refresh {
+  flex: 0 0 auto;
+}
+
+.notifications article {
+  align-items: flex-start;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-content > small {
+  display: block;
+}
+
+.notification-course-link {
+  display: inline-flex;
+  margin-top: 8px;
+}
+
+.notification-read-button {
+  flex: 0 0 auto;
+}
+
+.notification-more {
+  display: flex;
+  justify-content: center;
+  padding: 22px 0;
+}
+
+.notification-retry {
+  margin: 10px 0;
+}
+
+.notification-tabs button:focus-visible,
+.notification-refresh:focus-visible,
+.notification-more button:focus-visible,
+.notification-read-button:focus-visible {
+  outline: 3px solid #aaa5f3;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .notification-heading-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 500px) {
+  .notification-toolbar {
+    align-items: flex-start;
+  }
+
+  .notification-tabs {
+    min-width: 0;
+  }
+
+  .notification-tabs button {
+    flex: 0 0 auto;
+  }
+}

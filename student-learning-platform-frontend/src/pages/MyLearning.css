@@ -1,0 +1,57 @@
+.learning-tabs {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.learning-refresh {
+  margin-left: auto;
+  min-height: 34px;
+}
+
+.learning-refresh svg {
+  flex: 0 0 auto;
+}
+
+.learning-more {
+  display: flex;
+  justify-content: center;
+  padding: 22px 0;
+}
+
+.my-info h2 {
+  margin: 8px 0;
+  font: 700 16px Manrope, sans-serif;
+  letter-spacing: -.03em;
+}
+
+.my-info .track {
+  overflow: hidden;
+}
+
+.my-info .track i {
+  transition: width .25s ease;
+}
+
+.my-actions button:focus-visible,
+.learning-tabs button:focus-visible,
+.learning-more button:focus-visible {
+  outline: 3px solid #aaa5f3;
+  outline-offset: 2px;
+}
+
+@media (max-width: 500px) {
+  .learning-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 5px;
+  }
+
+  .learning-tabs > button[role="tab"] {
+    flex: 0 0 auto;
+  }
+
+  .learning-refresh {
+    margin-left: 0;
+  }
+}
